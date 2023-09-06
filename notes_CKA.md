@@ -116,6 +116,7 @@ Desired State / Declaritave Configuration
 
 ## What can you tell me about the primitive Controller API object?
 - K8s uses controllers to manage your pods' state. Controllers check that your pod is up, running, and healthy.
+- Controllers respond to pod state and health.
 - Controllers defines your desired state and also ensures things stay in the desired state.
 - Controllers are exposed to me as a workload resource API object that can create and manage pods for me.
 - These API objects will create and configure the controllers and will create and manage my pods.
@@ -129,8 +130,8 @@ Desired State / Declaritave Configuration
     - You can even roll back to previous version if you need to.
 - Deployments are core to the success of deploying applications in Kubernetes.
 
-## How does k8s add persitenacy/consistency to all this ephemerality(contant change)?
-- Services are the thing that adds persitance between all the changes that controllers make.
+## How does k8s add persitenacy/consistency to all this ephemerality(contant change)? ---> **Services**
+- **Services** are the thing that adds persitance between all the changes that controllers make.
     - Hey that's cool. How does a service accomplish this?
     - Service objects are a network abstraction to provide access to the container services that pods acutally provide. It does this by persitently allocating an IP and DNS name for the application services that are provided by the collection of pods that we want to front-end with a service.
     - As pods come and go based on their desired state, under the hood, k8s is going to dynamically update the service with new infromation for those particular pods. (Seems this new information is how to reach the service after accessing the front-end ip/dns.)
@@ -172,7 +173,7 @@ The control plane node (which implements the major control functions of a cluste
 3. Scheduler
     - This tell k8s which nodes to start pods on based on the pod's resource requirements and other attributes like administrative policies.
 4. Controller Manager
-    - This has the job of implementing the lifecycle function of the controller that execute an monitor the state of k8s objects like pods.
+    - This has the job of implementing the lifecycle function of the controllers that execute an monitor the state of k8s objects like pods.
     - As mentioned before, this has the responsibility to keep things in the desired state.
 5. `kubectl`
     - While not a component of the control plane node, it is important to us because this is how we, as an admin, interact with and get data from the control node.
@@ -190,7 +191,7 @@ The control plane node (which implements the major control functions of a cluste
 #### Scheduler
 - The scheduler watches the API server for unscheduled pods, and then schedule those pods on nodes.
 - When scheduling pods the scheduler will evaluate the resources required by the pod (CPU, memory, storage) to ensure their availability when placing the pod into the cluster.
-- The scheduler has the responsiblity of respecting any constraints that we defined administratively. Pod finity or pod anti-finity
+- The scheduler has the responsiblity of respecting any constraints that we defined administratively. Pod affinity or pod anti-affinity
 - There are many other attiributes the scheduler will use.
 #### Controller Manager
 - It is the job of the controller manager to execute those controller loops.
@@ -200,7 +201,7 @@ The control plane node (which implements the major control functions of a cluste
     - the replicaset controller will take on the responsiblity to communicate the API server changes in its desired state.
     - for example creating new pods or deleting old pods based on the running state of the cluster.
 
-### Tell me more about worker nodes...
+### Tell me more about worker nodes and their components...
 A node is where our application pods run.
 - The node starts up the pods and ensures that the containers in those pods are up and running.
 - Nodes also implement networking to enxure the reachability of the pods running on the nodes in our cluster.
@@ -219,6 +220,7 @@ A node is where our application pods run.
 - Common usage of kube-proxy is `iptables`
 - Responsible for routing traffic to pods.
     - As application requests arrive at a node's door, it is kube-proxy's job to get the request to the correct node/(pod?) in the cluster.
+- Kube-proxy is also used for load balancing. Makes sure that network traffic coming in is evenly distrubuted.
 #### Container Runtime
 - This is the acutal runtime environment for our containers.
 - This has the responsibility of pulling the container image for the container registrey and providing an execution environment for the container image and the "pod abstration".?
@@ -234,3 +236,23 @@ The kubelet and kube-proxy both communicate directly with the API server, monito
 - If there is a networking topology change that needs to be implemented, like adding a newly-create pod's IP to a service for load balancing, it is the responsiblity of the kube-proxy to pick up that change from the control plane's API server, and make that modification on the node.
 
 Note that all these worker node components (kubelet, kube-proxy, container runtime) will run on all the nodes in the cluster; even the control plane nodes.
+
+### What is a `Cluster Add-on Pod`?
+Cluster add-on pods are pods that provide special services to the cluster itself. You can think of them as special-purpose pods. For example, you can use a special-purpose pod for DNS.
+- A pod that provides DNS services in the cluster using the CoreDNS DNS server.
+- The IPs for the k8s service front ending these DNS server pods and the search suffix domain is placed into the networking configuration of any pods created by the clusters API server.
+- Pods, nodes, and services will register their addresses with the DNS server when they are created.
+- Since this is the DNS server used inside of the cluster for its services, it is commonly used for service discovery for applications deployed inside of a cluster.
+- Most likey to always find a DNS special-purpose pod in every cluster.
+- Other cluster add-ons include:
+  - Ingress Controllers - http load balancers and content routers
+  - K8s Dashboard - web based GUI to administer your k8s cluster. kubectl is the CLI tool to administer your cluster.
+  - Network Overlays - Calico?
+
+### Pod Operations - take a look at k8s in action.
+- We have one control plane node and two worker nodes.
+
+![](imgs/podOps.png)    
+
+- Using kubectl we submit code to instruct k8s to create a deployment.
+- In our deployment we've defined that we want three replicas of our pod.
